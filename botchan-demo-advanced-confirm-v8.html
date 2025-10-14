@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BOTCHAN デモ - 実践フォーム（v8：PW可視化＆右レイアウト）</title>
+<style>
+  :root{--c1:#0b58f6;--c2:#10b981;--c3:#f59e0b;--c4:#ef4444;--bg:#f8fafc;--card:#fff;--line:#e5e7eb;--text:#0f172a;--muted:#475569;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans JP',sans-serif;color:var(--text);background:var(--bg)}
+  header{padding:28px 20px;text-align:center;background:linear-gradient(120deg,#e6eeff,#f6f9ff);border-bottom:1px solid var(--line)}
+  header h1{margin:0 0 8px;font-size:clamp(22px,4vw,32px)}
+  header p{margin:0;color:var(--muted)}
+  .container{max-width:1100px;margin:0 auto;padding:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 10px 26px rgb(15 23 42 / .05);}
+  /* Form on RIGHT: left=aside, right=form */
+  .grid{display:grid;gap:16px;grid-template-columns:1fr}
+  @media(min-width:980px){.grid{grid-template-columns:380px 1fr}}
+  h2{margin:0 0 12px;font-size:20px}
+  .lead{color:var(--muted);line-height:1.7}
+  .row{margin:14px 0}
+  label{display:block;margin-bottom:6px;font-weight:700}
+  .req::after{content:" *";color:#dc2626;font-weight:700}
+  input[type="text"],input[type="email"],input[type="tel"],select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d1d5db;font-size:16px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .radio-row{display:flex;gap:16px;flex-wrap:wrap}
+  .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+  button{appearance:none;border:0;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:8px}
+  .b1{background:var(--c1);color:#fff}
+  .b2{background:var(--c2);color:#fff}
+  .b3{background:var(--c3);color:#fff}
+  .b4{background:#64748b;color:#fff}
+  .ghost{background:#eef2ff;color:#1e293b}
+  .ok{background:#0ea5e9;color:#fff}
+  .section-h{margin-top:22px;padding-top:8px;border-top:1px dashed var(--line);color:var(--muted);font-weight:700}
+  .hidden{display:none}
+  .danger{color:#dc2626;font-size:12px;margin-top:6px}
+  .inline-display{padding:12px 14px;background:#f1f5f9;border-radius:12px;border:1px dashed #cbd5e1}
+  .flex2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .flex3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:740px){.flex3{grid-template-columns:1fr}}
+  @media(max-width:640px){.flex2{grid-template-columns:1fr}}
+  .confirm{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px}
+  .confirm h3{margin:0 0 8px;font-size:18px}
+  .confirm dl{margin:0;display:grid;grid-template-columns:160px 1fr;gap:10px 12px}
+  .confirm dt{color:#334155}
+  .confirm dd{margin:0;font-weight:700}
+  .success{padding:16px;border:1px solid #86efac;background:#f0fdf4;color:#166534;border-radius:12px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-size:12px;display:inline-block}
+  .note{font-size:12px;color:#334155;background:#f1f5f9;border:1px dashed #cbd5e1;padding:8px 10px;border-radius:8px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:opacity .2s ease;z-index:1000}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>BOTCHAN デモ（v8：PW可視化＆右レイアウト）</h1>
+  <p>左のボタンで<b>代理入力</b>できます（確認/申込みは手動）</p>
+</header>
+
+<main class="container">
+  <section class="grid">
+    <!-- LEFT: controls -->
+    <aside class="card">
+      <h2>オートフィル（代理入力）</h2>
+      <p class="lead">以下のボタンでフォームに自動入力します。<br>※「内容を確認する」「デモを申し込む」は<b>手動</b>でクリックしてください。</p>
+
+      <div class="note">
+        <b>金額設定（すべて税込）</b><br>
+        ・商品：<br>
+　　　　- <b>BOTCHAN EFO（買い切り）</b>：<b>1,980円</b>（クレカ登録は任意）<br>
+　　　　- <b>BOTCHAN Payment（定期商品）</b>：<b>980円</b>（<b>クレカ情報必須</b>）<br>
+        ・送料：<b>北海道/沖縄 = 1,980円</b>、それ以外 = <b>0円</b><br>
+        ・手数料：<b>クレカ 0 / 代引 330 / 後払い 220</b><br>
+        ・キャンペーン割引：<b>満40歳以上 = 年齢×10円</b>（20〜39歳は0円）
+      </div>
+
+      <div class="row">
+        <div class="kbd">設定はスクリプト内 CONFIG を編集</div>
+      </div>
+
+      <div class="row">
+        <button id="fill-card-sub" class="btn b1" type="button">クレカで代理入力（定期）</button>
+        <button id="fill-card-one" class="btn b1" type="button">クレカで代理入力（買い切り）</button>
+      </div>
+      <div class="row">
+        <button id="fill-postpay-sub" class="btn b2" type="button">後払いで代理入力（定期）</button>
+        <button id="fill-postpay-one" class="btn b2" type="button">後払いで代理入力（買い切り）</button>
+      </div>
+      <div class="row">
+        <button id="fill-cod-sub" class="btn b3" type="button">代引で代理入力（定期）</button>
+        <button id="fill-cod-one" class="btn b3" type="button">代引で代理入力（買い切り）</button>
+      </div>
+
+      <div class="row">
+        <button id="set-age-30" class="btn b4" type="button">生年月日（30歳）</button>
+        <button id="set-age-50" class="btn b4" type="button">生年月日（50歳）</button>
+      </div>
+      <div class="row">
+        <button id="set-pref-hokkaido" class="btn b4" type="button">都道府県（北海道）</button>
+        <button id="set-pref-tokyo" class="btn b4" type="button">都道府県（東京都）</button>
+      </div>
+    </aside>
+
+    <!-- RIGHT: form -->
+    <article class="card">
+      <h2>申込フォーム</h2>
+      <form id="formMain" action="/LP.jsp" method="post" novalidate>
+        <div class="row flex2">
+          <div>
+            <label for="lastName" class="req">姓</label>
+            <input id="lastName" name="lastName" type="text" autocomplete="family-name" required />
+            <div id="err-lastName" class="danger hidden"></div>
+          </div>
+          <div>
+            <label for="firstName" class="req">名</label>
+            <input id="firstName" name="firstName" type="text" autocomplete="given-name" required />
+            <div id="err-firstName" class="danger hidden"></div>
+          </div>
+        </div>
+
+        <div class="row flex2">
+          <div>
+            <label for="lastNameKana">セイ</label>
+            <input id="lastNameKana" name="lastNameKana" type="text" placeholder="ﾔﾏﾀﾞ" inputmode="katakana" />
+          </div>
+          <div>
+            <label for="firstNameKana">メイ</label>
+            <input id="firstNameKana" name="firstNameKana" type="text" placeholder="ﾊﾅｺ" inputmode="katakana" />
+          </div>
+        </div>
+
+        <div class="row flex2">
+          <div>
+            <label for="gender" class="req">性別</label>
+            <select id="gender" name="gender" required>
+              <option value="" disabled selected>選択してください</option>
+              <option>男性</option>
+              <option>女性</option>
+              <option>回答しない</option>
+            </select>
+          </div>
+          <div>
+            <label class="req">生年月日</label>
+            <div class="flex3">
+              <select id="birthYear" required>
+                <option value="" disabled selected>年</option>
+              </select>
+              <select id="birthMonth" required>
+                <option value="" disabled selected>月</option>
+              </select>
+              <select id="birthDay" required>
+                <option value="" disabled selected>日</option>
+              </select>
+            </div>
+            <div id="err-birth" class="danger hidden"></div>
+            <div class="hint">20歳未満はご購入いただけません</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="email" class="req">メールアドレス</label>
+          <input id="email" name="email" type="email" autocomplete="email" required />
+        </div>
+
+        <div class="row">
+          <label for="password" class="req">パスワード</label>
+          <input id="password" name="password" type="text" inputmode="latin" maxlength="15" required />
+          <div class="hint">英数字のみ・4〜15文字（記号不可／同一文字3連続不可／生年月日由来（YYYY, MMDD, YYYYMMDD）不可）</div>
+          <div id="err-password" class="danger hidden"></div>
+        </div>
+
+        <div class="row flex3">
+          <div>
+            <label for="zip" class="req">郵便番号</label>
+            <input id="zip" name="zip" type="text" placeholder="1000001" inputmode="numeric" pattern="[0-9]{7}" required />
+            <div class="hint">例：1000001（7桁）</div>
+          </div>
+          <div>
+            <label for="pref" class="req">都道府県</label>
+            <select id="pref" name="pref" required>
+              <option value="" disabled selected>選択してください</option>
+              <option>北海道</option><option>青森県</option><option>岩手県</option><option>宮城県</option><option>秋田県</option><option>山形県</option><option>福島県</option>
+              <option>茨城県</option><option>栃木県</option><option>群馬県</option><option>埼玉県</option><option>千葉県</option><option>東京都</option><option>神奈川県</option>
+              <option>新潟県</option><option>富山県</option><option>石川県</option><option>福井県</option><option>山梨県</option><option>長野県</option>
+              <option>岐阜県</option><option>静岡県</option><option>愛知県</option><option>三重県</option>
+              <option>滋賀県</option><option>京都府</option><option>大阪府</option><option>兵庫県</option><option>奈良県</option><option>和歌山県</option>
+              <option>鳥取県</option><option>島根県</option><option>岡山県</option><option>広島県</option><option>山口県</option>
+              <option>徳島県</option><option>香川県</option><option>愛媛県</option><option>高知県</option>
+              <option>福岡県</option><option>佐賀県</option><option>長崎県</option><option>熊本県</option><option>大分県</option><option>宮崎県</option><option>鹿児島県</option><option>沖縄県</option>
+            </select>
+          </div>
+          <div>
+            <label for="city" class="req">市区町村</label>
+            <input id="city" name="city" type="text" placeholder="千代田区千代田" required />
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="addr1" class="req">番地・建物名</label>
+          <input id="addr1" name="addr1" type="text" placeholder="1-1 〇〇ビル 1F" required />
+        </div>
+
+        <!-- 商品選択 -->
+        <div class="section-h">商品選択（価格は税込）</div>
+        <div class="row">
+          <label for="product" class="req">商品</label>
+          <select id="product" name="product" required>
+            <option value="" disabled selected>選択してください</option>
+            <option>BOTCHAN EFO（買い切り）</option>
+            <option>BOTCHAN Payment（定期商品）</option>
+          </select>
+          <div class="hint">EFO：1,980円（クレカ任意）／ Payment：980円（クレカ<b>必須</b>）</div>
+        </div>
+
+        <div id="selected-info" class="row hidden">
+          <div class="row">
+            <label>商品名</label>
+            <div class="inline-display" id="display-name">-</div>
+            <input type="hidden" id="hidden-name" name="selected_product_name" />
+          </div>
+          <div class="row">
+            <label>商品金額（税込）</label>
+            <div class="inline-display" id="display-price">-</div>
+            <input type="hidden" id="hidden-price" name="selected_product_price" />
+          </div>
+        </div>
+
+        <!-- 支払い方法 -->
+        <div class="section-h">お支払い方法</div>
+        <div class="row">
+          <div id="pay-group" class="radio-row" role="radiogroup" aria-labelledby="pay-label">
+            <label id="pay-label" class="sr-only" style="position:absolute;left:-9999px;">支払い方法</label>
+            <label><input type="radio" name="payment" value="card" required> クレジットカード</label>
+            <label><input type="radio" name="payment" value="cod"> 代金引換</label>
+            <label><input type="radio" name="payment" value="postpay"> 後払い</label>
+          </div>
+          <div class="hint">定期商品の場合はクレカ情報が<b>必須</b>になります。</div>
+        </div>
+
+        <!-- クレジットカード情報（条件表示） -->
+        <div id="card-section" class="row hidden">
+          <div class="row flex3">
+            <div>
+              <label for="cardNumber" class="req">カード番号</label>
+              <input id="cardNumber" name="cardNumber" inputmode="numeric" pattern="[0-9]{13,19}" placeholder="4242424242424242" />
+            </div>
+            <div>
+              <label for="expMonth" class="req">有効期限（月）</label>
+              <input id="expMonth" name="expMonth" inputmode="numeric" pattern="(0[1-9]|1[0-2])" placeholder="MM" />
+            </div>
+            <div>
+              <label for="expYear" class="req">有効期限（年）</label>
+              <input id="expYear" name="expYear" inputmode="numeric" pattern="[0-9]{2}" placeholder="YY" />
+            </div>
+          </div>
+          <div class="row">
+            <label for="cvc" class="req">CVC</label>
+            <input id="cvc" name="cvc" inputmode="numeric" pattern="[0-9]{3,4}" placeholder="CVC" />
+          </div>
+
+          <div class="row">
+            <label class="req" id="cc-agree-label">
+              <input type="checkbox" id="cc-agree" name="ccAgree">
+              クレジットカード利用規約に同意する
+            </label>
+            <div class="hint">※ 定期商品の場合はこのチェックも<b>必須</b>になります。</div>
+            <div id="cc-agree-error" class="danger hidden">必須項目です。</div>
+          </div>
+        </div>
+
+        <!-- 同意事項 -->
+        <div class="section-h">同意事項</div>
+        <div class="row">
+          <label class="req">
+            <input type="checkbox" id="terms" name="terms" required>
+            個人情報の取り扱いに同意する
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="btn-review" class="b1 btn" type="button">内容を確認する</button>
+          <button id="btn-submit" class="ok btn hidden" type="button">デモを申し込む</button>
+          <button class="ghost btn" type="reset">リセット</button>
+        </div>
+
+        <div id="form-error" class="danger hidden">未入力/未同意の項目、またはバリデーションNGの項目があります。</div>
+
+        <!-- 確認ブロック -->
+        <div id="confirm-block" class="confirm hidden">
+          <h3>内容の確認（すべて税込）</h3>
+          <dl>
+            <dt>商品名：</dt><dd id="cf-name">-</dd>
+            <dt>商品金額：</dt><dd id="cf-price">-</dd>
+            <dt>送料：</dt><dd id="cf-ship">-</dd>
+            <dt>手数料：</dt><dd id="cf-fee">-</dd>
+            <dt>キャンペーン金額：</dt><dd id="cf-camp">-</dd>
+            <dt>合計金額：</dt><dd id="cf-total">-</dd>
+          </dl>
+        </div>
+
+        <!-- 完了メッセージ -->
+        <div id="done" class="success hidden" role="status" aria-live="polite">
+          デモの受付が完了しました。ご利用ありがとうございました。
+        </div>
+      </form>
+    </article>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<footer style="text-align:center;color:var(--muted);font-size:12px;padding:20px">© BOTCHAN Demo</footer>
+
+<script>
+(function(){
+  // ====== 金額（すべて税込） ======
+  const PRODUCT_PRICES = {
+    "BOTCHAN EFO（買い切り）": 1980,
+    "BOTCHAN Payment（定期商品）": 980
+  };
+  function shippingByPref(pref){ return (pref === '北海道' || pref === '沖縄県') ? 1980 : 0; }
+  const PAYMENT_FEES = { card: 0, cod: 330, postpay: 220 };
+
+  // ====== ユーティリティ ======
+  const $ = s=>document.querySelector(s), $$ = s=>Array.from(document.querySelectorAll(s));
+  function yen(n){ return (Number(n)||0).toLocaleString('ja-JP') + '円'; }
+  function setValue(el,val){ if(!el)return; el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); }
+  function setSelectByText(sel, text){ if(!sel)return; const opt=[...sel.options].find(o=>o.text.trim()===String(text)); if(opt){ sel.value=opt.value; } sel.dispatchEvent(new Event('change',{bubbles:true})); }
+  function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+  // ====== 生年月日セレクト ======
+  const birthYear = $('#birthYear'), birthMonth = $('#birthMonth'), birthDay = $('#birthDay');
+  function initBirthSelects(){
+    const today=new Date(), thisYear=today.getFullYear(), minYear=thisYear-120;
+    for(let y=thisYear;y>=minYear;y--){ const o=document.createElement('option'); o.value=String(y); o.textContent=String(y); birthYear.appendChild(o); }
+    for(let m=1;m<=12;m++){ const o=document.createElement('option'); o.value=String(m).padStart(2,'0'); o.textContent=String(m); birthMonth.appendChild(o); }
+    updateBirthDays();
+  }
+  function daysInMonth(year,month){ return new Date(Number(year), Number(month), 0).getDate(); }
+  function updateBirthDays(){
+    const y=birthYear.value, m=birthMonth.value, keep=birthDay.value;
+    birthDay.innerHTML = '<option value="" disabled selected>日</option>';
+    if(!y||!m) return;
+    const max=daysInMonth(y,m);
+    for(let d=1; d<=max; d++){ const o=document.createElement('option'); o.value=String(d).padStart(2,'0'); o.textContent=String(d); birthDay.appendChild(o); }
+    if(keep && Number(keep)<=max){ birthDay.value = keep; }
+    validateBirthAge();
+  }
+  birthYear.addEventListener('change', updateBirthDays);
+  birthMonth.addEventListener('change', updateBirthDays);
+  birthDay.addEventListener('change', validateBirthAge);
+
+  function getBirthParts(){
+    const y=birthYear.value, m=birthMonth.value, d=birthDay.value;
+    if(!y||!m||!d) return null;
+    return {y, m, d};
+  }
+  function calcAgeFromParts(bp){
+    if(!bp) return null;
+    const bd = new Date(`${bp.y}-${bp.m}-${bp.d}`);
+    if (isNaN(bd)) return null;
+    const t = new Date();
+    let age = t.getFullYear() - bd.getFullYear();
+    const mm = t.getMonth() - bd.getMonth();
+    if (mm < 0 || (mm === 0 && t.getDate() < bd.getDate())) age--;
+    return age;
+  }
+
+  // ====== 厳格バリデーション ======
+  const errBirth = $('#err-birth');
+  function validateBirthAge(){
+    const bp = getBirthParts();
+    errBirth.classList.add('hidden'); errBirth.textContent='';
+    if(!bp) return true;
+    const age = calcAgeFromParts(bp);
+    if (age===null) return false;
+    if (age < 20){
+      errBirth.textContent = '未成年（20歳未満）の方はご購入いただけません。';
+      errBirth.classList.remove('hidden');
+      return false;
+    }
+    return true;
+  }
+
+  // 氏名：環境依存文字を禁止
+  const nameAllowRe = /^[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uFF10-\uFF19\uFF21-\uFF3A\uFF41-\uFF5Aa-zA-Z0-9 　ー・\-]+$/;
+  function validateName(id, errId){
+    const el = $(id), err = $(errId);
+    err.classList.add('hidden'); err.textContent='';
+    if(!el.value) return true;
+    if(!nameAllowRe.test(el.value)){
+      err.textContent = '環境依存文字は使用できません（ひらがな・カタカナ・漢字・英数・スペース・長音・中点・ハイフンのみ）。';
+      err.classList.remove('hidden');
+      return false;
+    }
+    return true;
+  }
+  $('#lastName').addEventListener('input', ()=>validateName('#lastName','#err-lastName'));
+  $('#firstName').addEventListener('input', ()=>validateName('#firstName','#err-firstName'));
+
+  // パスワード：英数字のみ4〜15、同一3連続NG、生年月日（YYYY/MMDD/YYYYMMDD）含有NG
+  const errPw = $('#err-password');
+  function validatePassword(){
+    const v = $('#password').value || '';
+    errPw.classList.add('hidden'); errPw.textContent='';
+    if (!/^[A-Za-z0-9]{4,15}$/.test(v)){
+      errPw.textContent = '英数字のみ・4〜15文字で入力してください（記号不可）';
+      errPw.classList.remove('hidden'); return false;
+    }
+    if (/(.)\1\1/.test(v)){
+      errPw.textContent = '同じ文字を3文字以上連続させないでください。';
+      errPw.classList.remove('hidden'); return false;
+    }
+    const bp = getBirthParts();
+    if (bp){
+      const y = bp.y;
+      const md = bp.m + bp.d;
+      const ymd = y + bp.m + bp.d;
+      const candidates = [y, md, ymd];
+      if (candidates.some(c => v.includes(c))){
+        errPw.textContent = '生年月日由来（YYYY, MMDD, YYYYMMDD）を含むパスワードは使用できません。';
+        errPw.classList.remove('hidden'); return false;
+      }
+    }
+    return true;
+  }
+  $('#password').addEventListener('input', validatePassword);
+  birthYear.addEventListener('change', validatePassword);
+  birthMonth.addEventListener('change', validatePassword);
+  birthDay.addEventListener('change', validatePassword);
+
+  // ====== 金額表示・支払い制御 ======
+  const form = $('#formMain');
+  const formError = $('#form-error');
+  const productSel = $('#product');
+  const infoWrap = $('#selected-info');
+  const nameEl = $('#display-name');
+  const priceEl = $('#display-price');
+  const hiddenName = $('#hidden-name');
+  const hiddenPrice = $('#hidden-price');
+  const prefSel = $('#pref');
+  const ccAgree = $('#cc-agree');
+  const ccAgreeError = $('#cc-agree-error');
+  const cardSection = $('#card-section');
+  const btnReview = $('#btn-review');
+  const btnSubmit = $('#btn-submit');
+  const confirmBlock = $('#confirm-block');
+  const done = $('#done');
+  const cardRequiredFields = ['#cardNumber','#expMonth','#expYear','#cvc'].map($);
+
+  const cf = { name:$('#cf-name'), price:$('#cf-price'), ship:$('#cf-ship'), fee:$('#cf-fee'), camp:$('#cf-camp'), total:$('#cf-total') };
+
+  function getPaymentValue(){ return ($$('input[name="payment"]').find(r => r.checked)?.value) || ''; }
+
+  function updateProductInfo() {
+    const name = productSel.value;
+    const price = PRODUCT_PRICES[name];
+    if (name && price != null) {
+      nameEl.textContent = name;
+      priceEl.textContent = yen(price);
+      hiddenName.value = name;
+      hiddenPrice.value = price;
+      infoWrap.classList.remove('hidden');
+    } else {
+      infoWrap.classList.add('hidden');
+      nameEl.textContent = '-';
+      priceEl.textContent = '-';
+      hiddenName.value = '';
+      hiddenPrice.value = '';
+    }
+
+    // 定期商品はクレカ必須 → ラジオ制御
+    const isSubscription = (name === 'BOTCHAN Payment（定期商品）');
+    const radios = $$('input[name="payment"]');
+    radios.forEach(r => { r.disabled = isSubscription ? (r.value!=='card') : false; });
+    if (isSubscription) {
+      const cardRadio = radios.find(r=>r.value==='card'); if(cardRadio && !cardRadio.checked){ cardRadio.checked = true; cardRadio.dispatchEvent(new Event('change',{bubbles:true})); }
+    }
+    toggleCardRequirements(isSubscription || getPaymentValue()==='card');
+    toggleCcAgreeRequired(isSubscription);
+  }
+
+  function toggleCardRequirements(required){
+    if (required) {
+      cardSection.classList.remove('hidden');
+      cardRequiredFields.forEach(el => el.required = true);
+    } else {
+      cardSection.classList.add('hidden');
+      cardRequiredFields.forEach(el => { el.required = false; el.setCustomValidity(''); });
+      ccAgreeError.classList.add('hidden');
+    }
+  }
+
+  function toggleCcAgreeRequired(required){
+    ccAgree.required = required;
+    $('#cc-agree-label').classList.toggle('req', required);
+    if (!required) ccAgreeError.classList.add('hidden');
+  }
+
+  function updatePaymentVisibility(){
+    const isCard = (getPaymentValue()==='card');
+    const isSubscription = (productSel.value === 'BOTCHAN Payment（定期商品）');
+    toggleCardRequirements(isSubscription || isCard);
+    if (!isCard && isSubscription){
+      toast('定期商品のため、支払い方法はクレジットカードに固定されます');
+      const cardRadio = $$('input[name="payment"]').find(r=>r.value==='card');
+      if(cardRadio){ cardRadio.checked = true; cardRadio.dispatchEvent(new Event('change',{bubbles:true})); }
+    }
+  }
+
+  // 「内容を確認する」
+  function onReview(){
+    formError.classList.add('hidden'); confirmBlock.classList.add('hidden'); done.classList.add('hidden');
+
+    const okBirth = validateBirthAge();
+    const okLN = validateName('#lastName','#err-lastName');
+    const okFN = validateName('#firstName','#err-firstName');
+    const okPw = validatePassword();
+
+    if (!form.checkValidity() || !okBirth || !okLN || !okFN || !okPw) {
+      form.reportValidity();
+      formError.classList.remove('hidden');
+      return;
+    }
+
+    if (productSel.value === 'BOTCHAN Payment（定期商品）' && !$('#cc-agree').checked){
+      ccAgreeError.classList.remove('hidden'); $('#cc-agree').focus(); formError.classList.remove('hidden'); return;
+    }
+
+    const price = Number(PRODUCT_PRICES[productSel.value] || 0);
+    const ship = shippingByPref(prefSel.value);
+    const fee = PAYMENT_FEES[getPaymentValue()] ?? 0;
+    const camp = (function(){
+      const bp = getBirthParts();
+      const age = calcAgeFromParts(bp);
+      return (age!=null && age>=40)? -(age*10) : 0;
+    })();
+    const total = price + ship + fee + camp;
+
+    cf.name.textContent = productSel.value || '-';
+    cf.price.textContent = yen(price);
+    cf.ship.textContent = yen(ship);
+    cf.fee.textContent = yen(fee);
+    cf.camp.textContent = (camp>=0?yen(camp):('-'+yen(Math.abs(camp))));
+    cf.total.textContent = yen(total);
+
+    confirmBlock.classList.remove('hidden');
+    btnSubmit.classList.remove('hidden');
+  }
+
+  function onSubmitDemo(){ confirmBlock.classList.add('hidden'); btnSubmit.classList.add('hidden'); done.classList.remove('hidden'); }
+
+  btnReview.addEventListener('click', onReview);
+  btnSubmit.addEventListener('click', onSubmitDemo);
+  productSel.addEventListener('change', updateProductInfo);
+  $$('input[name="payment"]').forEach(r => r.addEventListener('change', updatePaymentVisibility));
+  $('#cc-agree')?.addEventListener('change', () => ccAgreeError.classList.add('hidden'));
+
+  // ====== オートフィル（代理入力）CONFIG＋ボタン ======
+  const CONFIG = {
+    AGE_FOR_TEST: 42,
+    lastName: '山田', firstName: '太郎',
+    lastNameKana: 'ﾔﾏﾀﾞ', firstNameKana: 'ﾀﾛｳ',
+    email: 'taro.yamada@example.com',
+    city: '千代田区千代田', addr1: '1-1 〇〇ビル 1F',
+    password: 'Abc1234', // 英数字のみ・7文字（記号なし）
+    cardValues: { cardNumber:'4242424242424242', expMonth:'12', expYear:'29', cvc:'123' },
+    zipByPref: { '北海道': '0600001', '東京都': '1000001', '沖縄県': '9000015' }
+  };
+
+  function birthPartsFromAge(age){ const t=new Date(); return { y:String(t.getFullYear()-age), m:String(t.getMonth()+1), d:String(t.getDate()) }; }
+  function applyAge(age){ const b=birthPartsFromAge(age); setSelectByText(birthYear,b.y); setSelectByText(birthMonth,b.m); setSelectByText(birthDay,b.d); }
+  function fillCommon(pref, zip){
+    setValue($('#lastName'), CONFIG.lastName);
+    setValue($('#firstName'), CONFIG.firstName);
+    setValue($('#lastNameKana'), CONFIG.lastNameKana);
+    setValue($('#firstNameKana'), CONFIG.firstNameKana);
+    setSelectByText($('#gender'), '男性');
+    applyAge(CONFIG.AGE_FOR_TEST);
+    setValue($('#email'), CONFIG.email);
+    setValue($('#password'), CONFIG.password);
+    setValue($('#zip'), zip || CONFIG.zipByPref[pref] || '');
+    setSelectByText($('#pref'), pref);
+    setValue($('#city'), CONFIG.city);
+    setValue($('#addr1'), CONFIG.addr1);
+  }
+  function ensureCardAndFill(){
+    const r = $$('input[name="payment"]').find(x=>x.value==='card'); if(r){ r.checked=true; r.dispatchEvent(new Event('change',{bubbles:true})); }
+    setValue($('#cardNumber'), CONFIG.cardValues.cardNumber);
+    setValue($('#expMonth'), CONFIG.cardValues.expMonth);
+    setValue($('#expYear'), CONFIG.cardValues.expYear);
+    setValue($('#cvc'), CONFIG.cardValues.cvc);
+    const a=$('#cc-agree'); if(a && !a.checked){ a.checked=true; a.dispatchEvent(new Event('change',{bubbles:true})); }
+  }
+  function trySelectPayment(value){
+    const r = $$('input[name="payment"]').find(x=>x.value===value);
+    if(r){ r.checked=true; r.dispatchEvent(new Event('change',{bubbles:true})); }
+  }
+
+  // 6ボタン：カード/後払い/代引 × 定期/買い切り
+  $('#fill-card-sub').addEventListener('click', ()=>{
+    fillCommon('東京都', CONFIG.zipByPref['東京都']);
+    setSelectByText($('#product'), 'BOTCHAN Payment（定期商品）');
+    ensureCardAndFill();
+    toast('定期（クレカ必須）をカードで代理入力しました');
+  });
+  $('#fill-card-one').addEventListener('click', ()=>{
+    fillCommon('東京都', CONFIG.zipByPref['東京都']);
+    setSelectByText($('#product'), 'BOTCHAN EFO（買い切り）');
+    trySelectPayment('card');
+    setValue($('#cardNumber'), CONFIG.cardValues.cardNumber);
+    setValue($('#expMonth'), CONFIG.cardValues.expMonth);
+    setValue($('#expYear'), CONFIG.cardValues.expYear);
+    setValue($('#cvc'), CONFIG.cardValues.cvc);
+    toast('買い切りをカードで代理入力しました（カードは任意）');
+  });
+  $('#fill-postpay-sub').addEventListener('click', ()=>{
+    fillCommon('東京都', CONFIG.zipByPref['東京都']);
+    setSelectByText($('#product'), 'BOTCHAN Payment（定期商品）');
+    trySelectPayment('postpay'); // 一旦反映 → 定期のためカードに切替
+    toast('定期はクレカ必須のため、支払い方法はクレジットカードに切り替わります');
+    ensureCardAndFill();
+  });
+  $('#fill-postpay-one').addEventListener('click', ()=>{
+    fillCommon('東京都', CONFIG.zipByPref['東京都']);
+    setSelectByText($('#product'), 'BOTCHAN EFO（買い切り）');
+    trySelectPayment('postpay');
+    toast('買い切りを後払いで代理入力しました');
+  });
+  $('#fill-cod-sub').addEventListener('click', ()=>{
+    fillCommon('東京都', CONFIG.zipByPref['東京都']);
+    setSelectByText($('#product'), 'BOTCHAN Payment（定期商品）');
+    trySelectPayment('cod');
+    toast('定期はクレカ必須のため、支払い方法はクレジットカードに切り替わります');
+    ensureCardAndFill();
+  });
+  $('#fill-cod-one').addEventListener('click', ()=>{
+    fillCommon('沖縄県', CONFIG.zipByPref['沖縄県']); // 送料確認しやすいよう沖縄
+    setSelectByText($('#product'), 'BOTCHAN EFO（買い切り）');
+    trySelectPayment('cod');
+    toast('買い切りを代引で代理入力しました');
+  });
+
+  // クイック年齢＆都道府県
+  $('#set-age-30').addEventListener('click', ()=> applyAge(30));
+  $('#set-age-50').addEventListener('click', ()=> applyAge(50));
+  $('#set-pref-hokkaido').addEventListener('click', ()=>{ setSelectByText($('#pref'), '北海道'); setValue($('#zip'), '0600001'); });
+  $('#set-pref-tokyo').addEventListener('click', ()=>{ setSelectByText($('#pref'), '東京都'); setValue($('#zip'), '1000001'); });
+
+  // 初期化
+  initBirthSelects();
+  updateBirthDays();
+  productSel.addEventListener('change', updateProductInfo);
+  $$('input[name="payment"]').forEach(r => r.addEventListener('change', updatePaymentVisibility));
+  updateProductInfo();
+  updatePaymentVisibility();
+})();
+</script>
+</body>
+</html>
