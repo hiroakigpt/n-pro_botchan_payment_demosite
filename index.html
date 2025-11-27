@@ -690,6 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 </script>
 <!-- BOTCHANのタグ設置 -->
+  <!--
 <script>
 document.addEventListener('efo_loaded_ready', function () {
     console.log("[DEBUG] efo_chat_inited 発火 → BOTCHAN 閉じ処理");
@@ -703,7 +704,47 @@ document.addEventListener('efo_loaded_ready', function () {
         }
     }, 5000); // 少し待つとより安定
 });
+</script> -->
+
+  <script>
+(function () {
+    const style = "padding:3px 6px; background:#222; color:#0f0;";
+
+    console.log("%c[EFO DEBUG] DOM監視を開始します", style);
+
+    const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+
+                // EFO本体のコンテナ検出（環境により3種類）
+                if (
+                    (node.classList && node.classList.contains("b-efo")) ||
+                    (node.classList && node.classList.contains("efo-container")) ||
+                    (node.id === "botchan-efo")
+                ) {
+                    console.log("%c[EFO DEBUG] EFO本体を検出 → 即閉じ", style);
+                    observer.disconnect();
+
+                    setTimeout(() => {
+                        if (window.btag) {
+                            console.log("%c[EFO DEBUG] btag close 実行", style);
+                            btag("event", "close");
+                        } else {
+                            console.warn("[EFO DEBUG] btag 未定義");
+                        }
+                    }, 300); // 0.3秒 待てばほぼ確実
+                }
+            }
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+})();
 </script>
+
 
 <script src="https://app2.blob.core.windows.net/botchan/js/faapp_ls.js" onload="efoInit('68f04d96c9ce7806c67aa3f4')"></script>
   
