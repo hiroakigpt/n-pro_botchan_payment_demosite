@@ -58,6 +58,37 @@
   <h1>BOTCHAN デモ（v8：PW可視化＆右レイアウト）</h1>
   <p>左のボタンで<b>代理入力</b>できます（確認/申込みは手動）</p>
 </header>
+<script>
+// ===============================
+// BOTCHAN デバッグイベント監視
+// ===============================
+
+// 監視したい BOTCHAN の全イベント一覧
+const botchanEvents = [
+  "efo_init_loaded",
+  "efo_loaded_ready",
+  "efo_chat_opened",
+  "efo_chat_inited",
+  "efo_message_loaded",
+  "efo_finished",
+  "efo_error",
+];
+
+// ログのスタイル
+const style = "padding:3px 6px; background:#222; color:#0f0; font-weight:bold;";
+
+// イベントを全部監視してログに出す
+botchanEvents.forEach(evt => {
+  document.addEventListener(evt, function(e) {
+    console.log(`%c[BOTCHAN EVENT] ${evt} 発生`, style, e);
+  });
+});
+
+// btag が存在するかの監視
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("%c[DEBUG] BOTCHAN 監視スクリプト読み込み完了", style);
+});
+</script>
 
 <main class="container">
   <section class="grid">
