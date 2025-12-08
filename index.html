@@ -705,17 +705,19 @@ document.addEventListener('efo_loaded_ready', function () {
     }, 5000); // 少し待つとより安定
 });
 </script> -->
+<script src="https://app2.blob.core.windows.net/botchan/js/faapp_ls.js" onload="efoInit('68f04d96c9ce7806c67aa3f4')"></script>
+<!-- BOTCHANの付属のタグ設置 -->
 <script>
- document.addEventListener('efo_opened_event',()=> {
-    btag('event', 'close');
-}, {'once': true})
+document.addEventListener('efo_opened_event', function() {
+  btag('event', 'close');
+}, { once: true });
 </script>
 <style>
   .wc-webchat-ctn:not(.wc-mobile) {
     transition: none !important;
 }
   </style>
-<script src="https://app2.blob.core.windows.net/botchan/js/faapp_ls.js" onload="efoInit('68f04d96c9ce7806c67aa3f4')"></script>
+
   
 </body>
 </html>
